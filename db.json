@@ -1,0 +1,87 @@
+{
+  "movies": [
+    {
+      "id": 1,
+      "title": "Bean",
+      "description": "Movie Details",
+      "date": "2021-05-18",
+      "rating": 4,
+      "genre": "Comedy"
+    },
+    {
+      "id": 2,
+      "title": "Batman",
+      "description": "wow",
+      "date": "2021-05-25",
+      "rating": 4,
+      "genre": "Action"
+    },
+    {
+      "id": 3,
+      "title": "Avengers",
+      "description": "movie details",
+      "date": "2021-05-18",
+      "rating": 3,
+      "genre": "Comedy"
+    }
+  ],
+  "schemas": {
+    "fields": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "rating": {
+          "type": "integer",
+          "maximum": 5
+        },
+        "genre": {
+          "type": "string",
+          "enum": [
+            "Action",
+            "Comedy",
+            "Drama"
+          ]
+        }
+      },
+      "required": [
+        "title",
+        "genre"
+      ]
+    },
+    "layout": {
+      "type": "VerticalLayout",
+      "elements": [
+        {
+          "type": "Control",
+          "scope": "#/properties/title"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/description",
+          "options": {
+            "multi": true
+          }
+        },
+        {
+          "type": "HorizontalLayout",
+          "elements": [
+            {
+              "type": "Control",
+              "scope": "#/properties/genre"
+            },
+            {
+              "type": "Control",
+              "scope": "#/properties/rating"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

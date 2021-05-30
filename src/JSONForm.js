@@ -11,6 +11,9 @@ import {
 import RatingControl from './RatingControl';
 import ratingControlTester from './ratingControlTester';
 import { makeStyles } from '@material-ui/core/styles';
+import {useParams, useHistory} from "react-router-dom";
+
+const api = "http://localhost:3004";
 
 const useStyles = makeStyles((_theme) => ({
   container: {
@@ -31,6 +34,7 @@ const useStyles = makeStyles((_theme) => ({
   resetButton: {
     margin: 'auto',
     display: 'block',
+    marginTop: 20
   },
   demoform: {
     margin: 'auto',
@@ -38,127 +42,73 @@ const useStyles = makeStyles((_theme) => ({
   },
 }));
 
-const schema = {
-    type: 'object',
-    properties: {
-      name: {
-        type: 'string',
-        minLength: 1,
-      },
-      description: {
-        type: 'string',
-      },
-      done: {
-        type: 'boolean',
-      },
-      due_date: {
-        type: 'string',
-        format: 'date',
-      },
-      rating: {
-        type: 'integer',
-        maximum: 5,
-      },
-      recurrence: {
-        type: 'string',
-        enum: ['Never', 'Daily', 'Weekly', 'Monthly'],
-      },
-      recurrence_interval: {
-        type: 'integer',
-      },
-    },
-    required: ['name', 'due_date'],
-  };
-  
-  const uischema = {
-    "type": "VerticalLayout",
-    "elements": [
-      {
-        "type": "Control",
-        "label": false,
-        "scope": "#/properties/done"
-      },
-      {
-        "type": "Control",
-        "scope": "#/properties/name"
-      },
-      {
-        "type": "HorizontalLayout",
-        "elements": [
-          {
-            "type": "Control",
-            "scope": "#/properties/due_date"
-          },
-          {
-            "type": "Control",
-            "scope": "#/properties/rating"
-          }
-        ]
-      },
-      {
-        "type": "Control",
-        "scope": "#/properties/description",
-        "options": {
-          "multi": true
-        }
-      },
-      {
-        "type": "HorizontalLayout",
-        "elements": [
-          {
-            "type": "Control",
-            "scope": "#/properties/recurrence"
-          },
-          {
-            "type": "Control",
-            "scope": "#/properties/recurrence_interval",
-            "rule": {
-              "effect": "HIDE",
-              "condition": {
-                "scope": "#/properties/recurrence",
-                "schema": {
-                  "const": "Never"
-                }
-              }
-            }
-          }
-        ]
-      }
-    ]
-  };  
-
-const initialData = {
-  name: 'Send email to Adrian',
-  description: 'Confirm if you have passed the subject\nHereby ...',
-  done: true,
-  recurrence: 'Daily',
-  rating: 3,
-};
 
 const renderers = [
   ...materialRenderers,
-  //register custom renderers
   { tester: ratingControlTester, renderer: RatingControl },
 ];
 
 const JSONForm = () => {
   const classes = useStyles();
-  const [displayDataAsString, setDisplayDataAsString] = useState('');
-  const [jsonformsData, setJsonformsData] = useState(initialData);
+  const [jsonformsData, setJsonformsData] = useState(null);
+  const [errors, setErrors] = useState([]);
 
-  useEffect(() => {
-    setDisplayDataAsString(JSON.stringify(jsonformsData, null, 2));
-  }, [jsonformsData]);
+  const [schema, setSchema] = useState(null);
+  const [uischema, setUischema] = useState(null);
+  const {id} = useParams();
+  const history = useHistory();
 
-  const clearData = () => {
-    setJsonformsData({});
-  };
+  useEffect(()=>{
+    getSchemas();
+    if(id){
+      getDetails(id)
+    }
+  },[id])
 
+  const getSchemas = ()=>{
+    const url = `${api}/schemas`;
+    fetch(url).then(res=>res.json())
+    .then((schemas)=>{
+      setSchema(schemas.fields);
+      setUischema(schemas.layout);
+    })
+  }
+
+  const getDetails = (id)=>{
+    const url = `${api}/movies/${id}`;
+    fetch(url).then(res=>res.json())
+    .then((data)=>{
+      setJsonformsData(data)
+    })
+  }
+
+  const submitData = ()=>{
+    const url = id ? `${api}/movies/${id}` : `${api}/movies/`;
+    const method = id ? "put" : "post";
+    fetch(url, {
+      method: method, 
+      body: JSON.stringify(jsonformsData),
+      headers: {
+        'Content-type': 'application/json; charset=UTF-8',
+      },
+    }).then(res=>res.json())
+    .then((data)=>{
+      if(data.id){
+        history.push("/")
+      }
+    })
+  }
+
+  const onChange = (e)=>{
+    setErrors(e.errors)
+    setJsonformsData(e.data)
+  }
+  
   return (
     <Fragment>
       <div className='App'>
         <header className='App-header'>
-          <h1 className='App-title'>JSON Forms with React</h1>
+          <h2 className='App-title' onClick={()=>history.push("/")}>JSON Forms with React</h2>
         </header>
       </div>
 
@@ -170,35 +120,29 @@ const JSONForm = () => {
       >
         <Grid item sm={6}>
           <Typography variant={'h3'} className={classes.title}>
-            Bound data
-          </Typography>
-          <div className={classes.dataContent}>
-            <pre id='boundData'>{displayDataAsString}</pre>
-          </div>
-          <Button
-            className={classes.resetButton}
-            onClick={clearData}
-            color='primary'
-            variant='contained'
-          >
-            Clear data
-          </Button>
-        </Grid>
-        <Grid item sm={6}>
-          <Typography variant={'h3'} className={classes.title}>
-            Rendered form
+            Add
           </Typography>
           <div className={classes.demoform}>
-            <JsonForms
+            {schema && uischema && <JsonForms
               schema={schema}
               uischema={uischema}
               data={jsonformsData}
               renderers={renderers}
               cells={materialCells}
-              onChange={({ errors, data }) => setJsonformsData(data)}
-            />
+              onChange={onChange}
+            />}
+            <Button
+            className={classes.resetButton}
+            onClick={submitData}
+            color='primary'
+            variant='contained'
+            disabled={errors.length>0}
+          >
+            Submit
+          </Button>
           </div>
         </Grid>
+        
       </Grid>
     </Fragment>
   );
